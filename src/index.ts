@@ -242,6 +242,9 @@ export class Reorgme {
         output(`Creating volume ${volume}`)
         await this.docker.createVolume({ name: volume })
 
+        output(`Pulling image ${this.image}`)
+        await this.docker.pull(this.image)
+
         // Init network data using genesis
         output('Creating initialization database container')
         const initContainer = await this.docker.createContainer({
