@@ -217,6 +217,31 @@ export class Reorgme {
   }
 
   public async bootstrap() {
+    await Lestr({
+      title: `Validating docker image ${this.image}`,
+      task: async (title, output) => {
+        const exists = async () => {
+          try {
+            return (await this.docker.getImage(this.image).inspect()) !== undefined
+          } catch {}
+          return false
+        }
+
+        output('Checking if image is locally available')
+        if (await exists()) {
+          title(`Using locally found docker image for ${this.image}`)
+          return
+        }
+
+        output(`Downloading image`)
+        await this.docker.pull(this.image)
+
+        await waitCondition(() => exists())
+
+        title(`Downloaded docker image ${this.image}`)
+      }
+    })
+
     await this.clearContainers()
     await this.clearVolumes()
 
@@ -241,9 +266,6 @@ export class Reorgme {
 
         output(`Creating volume ${volume}`)
         await this.docker.createVolume({ name: volume })
-
-        output(`Pulling image ${this.image}`)
-        await this.docker.pull(this.image)
 
         // Init network data using genesis
         output('Creating initialization database container')
