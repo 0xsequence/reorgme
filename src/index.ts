@@ -520,7 +520,7 @@ export class Reorgme {
         // Init network data using genesis
         output('Copy DAG and init database')
         const copyContainer = await this.docker.createContainer({
-          Image: 'ubuntu',
+          Image: 'alpine',
           name: name,
           Cmd: [
             'cp',
