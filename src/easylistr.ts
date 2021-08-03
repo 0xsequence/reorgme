@@ -2,7 +2,7 @@ import Listr from "listr"
 
 export type LestrInput<T> = {
   title: string,
-  task: (title: (title: string) => void, output: (output: string) => void, task: Listr.ListrTaskWrapper<any>) => Promise<T>
+  task: (opts: { title: (title: string) => void, output: (output: string) => void, task: Listr.ListrTaskWrapper<any> }) => Promise<T>
 }
 
 export async function Lestr<T>(...tasks: LestrInput<T>[] | LestrInput<T>[][]): Promise<T[]> {
@@ -13,9 +13,9 @@ export async function Lestr<T>(...tasks: LestrInput<T>[] | LestrInput<T>[][]): P
     task: async (ctx, task) => {
       const title = (title: string) => { task.title = title }
       const output = (output: string) => { task.output = output }
-      ctx[i] = await t.task(title, output, task)
+      ctx[i] = await t.task({ title, output, task })
     }
-  })), { concurrent: true, exitOnError: true })).run()
+  })), { concurrent: true, exitOnError: false })).run()
 
   return tasks.map((_, i) => res[i])
 }

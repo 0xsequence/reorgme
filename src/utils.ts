@@ -24,3 +24,14 @@ export async function waitFor<T>(promise: () => Promise<T | undefined>, sleep = 
     }
   }
 }
+
+export function parseDockerReason(err: Error | string): string {
+  const str = err.toString()
+  const split = str.split(' - ')
+
+  if (split.length > 1) {
+    return split[1]
+  }
+
+  return str
+}

@@ -4,10 +4,17 @@ import * as fs from 'fs'
 import { ethers } from 'ethers'
 import { waitCondition, waitFor } from "./utils"
 import { Lestr } from "./easylistr"
+import chalk from "chalk"
 
 export const CONTAINER_PREFIX = "reorgme_geth_child"
 export const VOLUME_PREFIX = "reorgme_geth_child"
 export const NETWORK_PREFIX = "reorgme_geth_network"
+
+const colors = [
+  chalk.blue,
+  chalk.green,
+  chalk.red
+]
 
 export const SAMPLE_GENESIS = {
   "config": {
@@ -89,6 +96,10 @@ export class Reorgme {
     return new Array(3).fill(0).map((_, i) => this.containerName(i))
   }
 
+  public forkedContainer(): string {
+    return this.containerName(0)
+  }
+
   public tmpContainerName(): string {
     return `${this.containerPrefix()}_tmp`
   }
@@ -127,6 +138,19 @@ export class Reorgme {
     return `${NETWORK_PREFIX}_${this.id}_internal`
   }
 
+  public async logs() {
+    const containers = this.containerNames()
+    const streams = await Promise.all(containers.map((c) => this.docker.getContainer(c).logs(
+      { stdout: true, stderr: true, tail: 10, follow: true }
+    )))
+
+    containers.forEach((c, i) => {
+      streams[i].on("data", (data) => {
+        console.log(`${colors[i](c + ":")} ${data.slice(8).toString().replace('\n', '')}`)
+      })
+    })
+  }
+
   public async enodeOf(index: number) {
     const container = await waitFor(async () => this.docker.getContainer(this.containerName(index)))
     const netInfo = await waitFor(async () => (await container.inspect()).NetworkSettings.Networks[this.internalNetworkName()])
@@ -147,8 +171,8 @@ export class Reorgme {
     // Find all existing containers of reorgme
     const [containers] = await Lestr({
       title: "Loading existing containers",
-      task: async(title, output) => {
-        const containers = await this.docker.listContainers()
+      task: async({ title }) => {
+        const containers = await this.docker.listContainers({ all: true })
         const found = containers.filter((v) => v.Names.find((s) => s.replace('/', '').startsWith(this.containerPrefix())) !== undefined)
         title(`Found ${found.length} existing containers`)
         return found
@@ -157,7 +181,7 @@ export class Reorgme {
 
     await Lestr(containers.map((c) => ({
       title: `Removing container ${c.Names[0]}`,
-      task: async (title, output) => {
+      task: async ({ title, output }) => {
         if (c.State === 'running') {
           output("Stopping container")
           await this.docker.getContainer(c.Id).stop({ t: 0 })
@@ -174,7 +198,7 @@ export class Reorgme {
     // Find all volumes of reorgme
     const [volumes] = await Lestr({
       title: "Loading existing containers",
-      task: async (title) => {
+      task: async ({ title }) => {
         const volumes = (await this.docker.listVolumes()).Volumes.filter((v) => v.Name.startsWith(this.volumePrefix()))
         title(`Found ${volumes.length} existing volumes`)
         return volumes
@@ -183,7 +207,7 @@ export class Reorgme {
 
     await Lestr(volumes.map((v) => ({
       title: `Removing volume ${v.Name}`,
-      task: async (title) => {
+      task: async ({ title }) => {
         await this.docker.getVolume(v.Name).remove()
         title(`Removed volume ${v.Name}`)
       }
@@ -206,7 +230,7 @@ export class Reorgme {
   public async mustNetwork(name: string) {
     return Lestr({
       title: `Creating network ${name}`,
-      task: async (title, output) => {
+      task: async ({ title, output }) => {
         output('Removing old network')
         await this.clearNetwork(name)
         output('Creating new network')
@@ -216,10 +240,134 @@ export class Reorgme {
     })
   }
 
-  public async bootstrap() {
+  public async stop() {
+    await this.clearContainers()
+    await this.clearVolumes()
+  }
+
+  public async pause() {
+    return Lestr(this.containerNames().map((c) => ({
+      title: `Pausing container ${c}`,
+      task: async ({ title, output }) => {
+        output('Get container information')
+        const container = this.docker.getContainer(c)
+        const inspect = await container.inspect()
+        if (!inspect.State.Paused) {
+          output('Pausing container')
+          await container.pause()
+          title(`Paused container ${c}`)
+        } else {
+          if (!inspect.State.Running) {
+            throw new Error(`Container ${c} not found`)
+          }
+
+          title(`Container ${c} already paused`)
+        }
+      }
+    })))
+  }
+
+  public async resume() {
+    return Lestr(this.containerNames().map((c) => ({
+      title: `Resuming container ${c}`,
+      task: async ({ title, output }) => {
+        output('Get container information')
+        const container = this.docker.getContainer(c)
+        const inspect = await container.inspect()
+
+        if (inspect.State.Paused) {
+          output('Resuming container')
+          await container.unpause()
+          title(`Resumed container ${c}`)
+        } else {
+          if (!inspect.State.Running) {
+            throw new Error(`Container ${c} not found`)
+          }
+
+          title(`Container ${c} not paused`)
+        }
+      }
+    })))
+  }
+
+  public async join() {
+    return Lestr({
+      title: `Joining ${this.forkedContainer()}`,
+      task: async ({ title, output }) => {
+        output(`Connecting to internal network`)
+        console.log(this.internalNetworkName(), this.forkedContainer())
+        await this.docker.getNetwork(this.internalNetworkName()).connect({ Container: this.forkedContainer() })
+
+        output('Waiting for block sync')
+        const provider = await this.rpcProvider(0)
+        const altProvider = await this.rpcProvider(1)
+
+        var lastBlock: ethers.providers.Block
+        var lastAltBlock: ethers.providers.Block
+
+        await waitCondition(async () => {
+          const block = await provider.getBlock('latest')
+          if (lastBlock && block.number === lastBlock?.number) return false
+          lastBlock = block
+
+          output(`Found block ${block.number}:${block.hash.slice(0, 5)} on ${this.forkedContainer()}`)
+          lastAltBlock = await waitFor(async () => {
+            try {
+              const b = await altProvider.getBlock(block.number)
+              return b === null ? undefined : b
+            } catch {}
+          })
+          output(`Compare with other nodes ${block.number}:${block.hash.slice(0, 5)} vs ${lastAltBlock.number}:${lastAltBlock.hash.slice(0, 5)}`)
+          return lastAltBlock.hash === block.hash
+        })
+
+        title(`Joined ${this.forkedContainer()}`)
+      }
+    })
+  }
+
+  public async fork() {
+    return Lestr({
+      title: `Forking ${this.forkedContainer()}`,
+      task: async ({ title, output }) => {
+        output(`Disconnecting from internal network`)
+        console.log(this.internalNetworkName(), this.forkedContainer())
+        await this.docker.getNetwork(this.internalNetworkName()).disconnect({ Container: this.forkedContainer() })
+
+        output('Waiting for block split')
+        const provider = await this.rpcProvider(0)
+        const altProvider = await this.rpcProvider(1)
+
+        var lastBlock: ethers.providers.Block
+        var lastAltBlock: ethers.providers.Block
+
+        await waitCondition(async () => {
+          const block = await provider.getBlock('latest')
+          if (lastBlock && block.number === lastBlock?.number) return false
+          lastBlock = block
+
+          output(`Found block ${block.number}:${block.hash.slice(0, 5)} on ${this.forkedContainer()}`)
+          lastAltBlock = await waitFor(async () => {
+            try {
+              return await altProvider.getBlock(block.number)
+            } catch {}
+          })
+          output(`Compare with other nodes ${block.number}:${block.hash.slice(0, 5)} vs ${lastAltBlock.number}:${lastAltBlock.hash.slice(0, 5)}`)
+          return lastAltBlock.hash !== block.hash
+        })
+
+        title(`Forked ${this.forkedContainer()}`)
+      }
+    })
+  }
+
+  public async start() {
+    await this.clearContainers()
+    await this.clearVolumes()
+
     await Lestr({
       title: `Validating docker image ${this.image}`,
-      task: async (title, output) => {
+      task: async ({ title, output }) => {
         const exists = async () => {
           try {
             return (await this.docker.getImage(this.image).inspect()) !== undefined
@@ -242,16 +390,13 @@ export class Reorgme {
       }
     })
 
-    await this.clearContainers()
-    await this.clearVolumes()
-
     await this.mustNetwork(this.networkName())
     await this.mustNetwork(this.internalNetworkName())
 
     // Copy genesis block to container
     await Lestr({
       title: 'Writing genesis block',
-      task: async(title) => {
+      task: async({ title }) => {
         this.mustExistTmpFolder()
         fs.writeFileSync(`${this.tmpFolder()}/genesis.json`, JSON.stringify(SAMPLE_GENESIS))
         title('Written genesis block file')
@@ -261,7 +406,7 @@ export class Reorgme {
     // Create containers
     await Lestr(this.containerNames().map((name, i) => ({
       title: `Starting node ${name}`,
-      task: async (title, output) => {
+      task: async ({ title, output }) => {
         const volume = this.volumeName(i)
 
         output(`Creating volume ${volume}`)
