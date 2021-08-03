@@ -156,7 +156,7 @@ export class Reorgme {
   }
 
   public async enodeOf(index: number) {
-    const container = await waitFor(async () => this.docker.getContainer(this.containerName(index)))
+    const container = await waitFor(async () => { try { return this.docker.getContainer(this.containerName(index)) } catch {} })
     const netInfo = await waitFor(async () => (await container.inspect()).NetworkSettings.Networks[this.internalNetworkName()])
     return `enode://${this.nodeKeys[index].pub}@${netInfo.IPAddress}:30303`
     // return `enode://${this.nodeKeys[index].pub}@${this.volumeName(index)}:30303`
@@ -561,11 +561,8 @@ export class Reorgme {
             '--nousb',
             '--datadir',
             '/data',
-            // '--nodiscover',
             '--nodekeyhex',
             this.nodeKeys[i].pk,
-            // '--bootnodes',
-            // `${this.containerNames().filter((n) => n !== name).map((_, i) => this.enodeOf(i)).join(',')}`,
             '--mine',
             '--miner.threads',
             '1',

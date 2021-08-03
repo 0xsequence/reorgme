@@ -17,7 +17,7 @@ export async function waitCondition(promise: () => Promise<boolean | undefined>,
 export async function waitFor<T>(promise: () => Promise<T | undefined>, sleep = 100): Promise<T> {
   while (true) {
     const res = await promise()
-    if (res === undefined) {
+    if (res === undefined || res === null) {
       await wait(sleep)
     } else {
       return res
