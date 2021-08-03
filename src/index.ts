@@ -3,7 +3,7 @@ import { createLogger, format, Logger, transports } from "winston"
 import * as fs from 'fs'
 import { ethers } from 'ethers'
 import { waitCondition, waitFor } from "./utils"
-import { Lestr } from "./easylistr"
+import { Lestr, LestrInput } from "./easylistr"
 import chalk from "chalk"
 
 export const CONTAINER_PREFIX = "reorgme_geth_child"
@@ -365,34 +365,41 @@ export class Reorgme {
     })
   }
 
+  validateDockerImageTask(image: string) {
+    return {
+      title: `Validating docker image: ${image}`,
+      task: async ({ title, output }: { title: (s: string) => void, output: (s: string) => void }) => {
+        const exists = async () => {
+          try {
+            return (await this.docker.getImage(image).inspect()) !== undefined
+          } catch {}
+          return false
+        }
+  
+        output('Checking if image is locally available')
+        if (await exists()) {
+          title(`Using locally found docker image for ${image}`)
+          return
+        }
+  
+        output(`Downloading image`)
+        await this.docker.pull(image)
+  
+        await waitCondition(() => exists())
+  
+        title(`Downloaded docker image: ${image}`)
+      }
+    }
+  }
+
   public async start() {
     await this.clearContainers()
     await this.clearVolumes()
 
-    await Lestr({
-      title: `Validating docker image ${this.image}`,
-      task: async ({ title, output }) => {
-        const exists = async () => {
-          try {
-            return (await this.docker.getImage(this.image).inspect()) !== undefined
-          } catch {}
-          return false
-        }
-
-        output('Checking if image is locally available')
-        if (await exists()) {
-          title(`Using locally found docker image for ${this.image}`)
-          return
-        }
-
-        output(`Downloading image`)
-        await this.docker.pull(this.image)
-
-        await waitCondition(() => exists())
-
-        title(`Downloaded docker image ${this.image}`)
-      }
-    })
+    await Lestr(
+      this.validateDockerImageTask(this.image),
+      this.validateDockerImageTask("alpine")
+    )
 
     await this.mustNetwork(this.networkName())
     await this.mustNetwork(this.internalNetworkName())
