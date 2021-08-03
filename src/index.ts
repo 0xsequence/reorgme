@@ -112,6 +112,10 @@ export class Reorgme {
     return `${this.volumePrefix()}_genesis`
   }
 
+  public volumeDag() {
+    return `${this.volumePrefix()}_dag`
+  }
+
   public tmpFolder() {
     return `/tmp/reorgme_${this.id}`
   }
@@ -403,11 +407,14 @@ export class Reorgme {
       }
     })
 
-    // Create containers
-    await Lestr(this.containerNames().map((name, i) => ({
-      title: `Starting node ${name}`,
+    // Generating a single DAG
+    // then copying to the other nodes
+    // this saves reduces the total CPU usage to only 1/3
+    await Lestr({
+      title: 'Generating DAG',
       task: async ({ title, output }) => {
-        const volume = this.volumeName(i)
+        const volume = this.volumeDag()
+        const name = this.containerName(0)
 
         output(`Creating volume ${volume}`)
         await this.docker.createVolume({ name: volume })
@@ -421,9 +428,7 @@ export class Reorgme {
             'init',
             '--datadir',
             '/data',
-            '/genesis/genesis.json',
-            '--nodekeyhex',
-            this.nodeKeys[i].pk
+            '/genesis/genesis.json'
           ],
           Tty: true,
           AttachStdin: false,
@@ -458,6 +463,97 @@ export class Reorgme {
             '--nousb',
             '--datadir',
             '/data',
+            '--mine',
+            '--miner.threads',
+            '1',
+            '--miner.etherbase',
+            '0x646b186c9ccAD43a0b9c8E4efd1d9F4a2D20c358',
+            '--ethash.dagdir',
+            '/data/.ethash'
+          ],
+          HostConfig: {
+            NetworkMode: `${this.networkName()}`,
+            Binds: [
+              `${volume}:/data`
+            ]
+          }
+        })
+
+        output('Starting node')
+        await container.start()
+
+        output('Generating DAG')
+        await waitCondition(async () => {
+          const logs = await container.logs({ stdout: true, stderr: true, follow: false }) as unknown as Buffer
+          if (logs.includes("Generating DAG in progress")) {
+            const logs2 = await container.logs({ tail: 16, stdout: true, stderr: true, follow: false }) as unknown as Buffer
+            return !logs2.includes("Generating DAG in progress")
+          }
+        }, 1000)
+
+        output('Stopping container')
+        await this.docker.getContainer(name).stop({ t: 60000 })
+
+        output('Removing container')
+        await this.docker.getContainer(name).remove()
+
+        title('Generated DAG')
+      }
+    })
+
+    // Create containers
+    await Lestr(this.containerNames().map((name, i) => ({
+      title: `Starting node ${name}`,
+      task: async ({ title, output }) => {
+        const volume = this.volumeName(i)
+
+        output(`Creating volume ${volume}`)
+        await this.docker.createVolume({ name: volume })
+
+        // Init network data using genesis
+        output('Copy DAG and init database')
+        const copyContainer = await this.docker.createContainer({
+          Image: 'ubuntu',
+          name: name,
+          Cmd: [
+            'cp',
+            '-a',
+            '-v',
+            '/data1/.',
+            '/data2'
+          ],
+          Tty: true,
+          AttachStdin: false,
+          AttachStdout: true,
+          AttachStderr: true,
+          OpenStdin: false,
+          StdinOnce: false,
+          HostConfig: {
+            Binds: [
+              `${this.volumeDag()}:/data1`,
+              `${volume}:/data2`
+            ],
+            AutoRemove: true
+          }
+        })
+
+        output('Starting copy DAG')
+        await copyContainer.start()
+
+        output('Waiting DAG copy')
+        await waitCondition(async () => {
+          return !((await this.docker.listContainers({ all: true })).find((c) => c.Names.find((n) => n.replace('/', '').startsWith(name)) !== undefined) !== undefined)
+        })
+
+        output('Creating container')
+        const container = await this.docker.createContainer({
+          Image: this.image,
+          name: name,
+          Cmd: [
+            '--nocompaction',
+            '--nousb',
+            '--datadir',
+            '/data',
             // '--nodiscover',
             '--nodekeyhex',
             this.nodeKeys[i].pk,
@@ -468,6 +564,8 @@ export class Reorgme {
             '1',
             '--miner.etherbase',
             '0x646b186c9ccAD43a0b9c8E4efd1d9F4a2D20c358',
+            '--ethash.dagdir',
+            '/data/.ethash',
             '--http',
             '--http.addr',
             '0.0.0.0',
@@ -517,15 +615,6 @@ export class Reorgme {
           await provider.send('admin_addPeer', [await this.enodeOf(pi)])
         }))
 
-        output('Generating DAG')
-        await waitCondition(async () => {
-          const logs = await container.logs({ stdout: true, stderr: true, follow: false }) as unknown as Buffer
-          if (logs.includes("Generating DAG in progress")) {
-            const logs2 = await container.logs({ tail: 32, stdout: true, stderr: true, follow: false }) as unknown as Buffer
-            return !logs2.includes("Generating DAG in progress")
-          }
-        }, 1000)
-
         output('Waiting for block generation')
         await waitCondition(async () => {
           try {
@@ -563,5 +652,14 @@ export class Reorgme {
         title(`Started node ${name}`)  
       }
     })))
+
+    // Clean unused volumes
+    await Lestr({
+      title: "Removing DAG volume",
+      task: async ({ title }) => {
+        await this.docker.getVolume(this.volumeDag()).remove()
+        title('Removed DAG volume')
+      }
+    })
   }
 }
