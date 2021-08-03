@@ -302,8 +302,8 @@ export class Reorgme {
         const provider = await this.rpcProvider(0)
         const altProvider = await this.rpcProvider(1)
 
-        var lastBlock: ethers.providers.Block
-        var lastAltBlock: ethers.providers.Block
+        let lastBlock: ethers.providers.Block
+        let lastAltBlock: ethers.providers.Block
 
         await waitCondition(async () => {
           const block = await provider.getBlock('latest')
@@ -338,8 +338,8 @@ export class Reorgme {
         const provider = await this.rpcProvider(0)
         const altProvider = await this.rpcProvider(1)
 
-        var lastBlock: ethers.providers.Block
-        var lastAltBlock: ethers.providers.Block
+        let lastBlock: ethers.providers.Block
+        let lastAltBlock: ethers.providers.Block
 
         await waitCondition(async () => {
           const block = await provider.getBlock('latest')
