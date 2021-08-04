@@ -297,7 +297,6 @@ export class Reorgme {
       title: `Joining ${this.forkedContainer()}`,
       task: async ({ title, output }) => {
         output(`Connecting to internal network`)
-        console.log(this.internalNetworkName(), this.forkedContainer())
         await this.docker.getNetwork(this.internalNetworkName()).connect({ Container: this.forkedContainer() })
 
         output('Waiting for block sync')
@@ -333,7 +332,6 @@ export class Reorgme {
       title: `Forking ${this.forkedContainer()}`,
       task: async ({ title, output }) => {
         output(`Disconnecting from internal network`)
-        console.log(this.internalNetworkName(), this.forkedContainer())
         await this.docker.getNetwork(this.internalNetworkName()).disconnect({ Container: this.forkedContainer() })
 
         output('Waiting for block split')
