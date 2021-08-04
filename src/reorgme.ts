@@ -283,6 +283,15 @@ export class Reorgme {
     })))
   }
 
+  public async waitForContainer(index: number) {
+    return waitCondition(async () => {
+      try {
+        const detail = await this.docker.getContainer(this.containerName(index)).inspect()
+        return detail.State.Running
+      } catch {}
+    })
+  }
+
   public async join() {
     return Lestr({
       title: `Joining ${this.forkedContainer()}`,
@@ -588,6 +597,9 @@ export class Reorgme {
 
         output('Starting node')
         await container.start()
+
+        output('Waiting other nodes')
+        await Promise.all(this.peerIds(i).map((i) => this.waitForContainer(i)))
 
         output('Connecting to internal network')
         await this.docker.getNetwork(this.internalNetworkName()).connect({ Container: container.id })
