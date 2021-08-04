@@ -19,7 +19,6 @@
     "ethers": "^5.4.2",
     "listr": "^0.14.3",
     "ts-node": "^10.1.0",
-    "winston": "^3.3.3",
     "yargs": "^17.0.1"
   },
   "devDependencies": {

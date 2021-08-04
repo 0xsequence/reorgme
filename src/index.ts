@@ -1,9 +1,8 @@
-import Dockerode, { DockerOptions, Task } from "dockerode"
-import { createLogger, format, Logger, transports } from "winston"
+import Dockerode, { DockerOptions } from "dockerode"
 import * as fs from 'fs'
 import { ethers } from 'ethers'
 import { waitCondition, waitFor } from "./utils"
-import { Lestr, LestrInput } from "./easylistr"
+import { Lestr } from "./easylistr"
 import chalk from "chalk"
 
 export const CONTAINER_PREFIX = "reorgme_geth_child"
@@ -43,20 +42,17 @@ export type NodeKeys = {
 
 export type ReorgmeOptions = {
   id?: number
-  logLevel?: string
   dockerOptions?: DockerOptions
 }
 
 export const ReorgmeDefaults = {
   id: 0,
-  logLevel: 'info'
 }
 
 export class Reorgme {
   public id: number
 
   public docker: Dockerode
-  public logger: Logger
   public image = "ethereum/client-go"
 
   public nodeKeys: NodeKeys[] = [{
@@ -69,19 +65,12 @@ export class Reorgme {
     pk: "4efa315cb0cecc240b8dac6ce06af8c43709e3b016836f5b7ae20fefeec7ef10",
     pub: "de2c0919fb6612aa6c50e36c28ff4767317c07987de9a4390f5044ae9d00946cd00db4bff13408957d798315598ebf9a3e62266c9506d27bc6d01470b7f8c070"
   }]
+
   constructor(options?: ReorgmeOptions) {
     const opts = { ...ReorgmeDefaults, ...options }
 
     this.id = opts.id
     this.docker = new Dockerode(opts.dockerOptions)
-    this.logger = createLogger({
-      level: opts.logLevel,
-      transports: [
-        new transports.Console({
-          format: format.cli()
-        })
-      ]
-    })
   }
 
   public containerName(index: number) {
