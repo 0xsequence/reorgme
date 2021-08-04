@@ -1,4 +1,5 @@
 import Listr from "listr"
+import { VerboseRenderer2 } from "./logger"
 
 export type LestrInput<T> = {
   title: string,
@@ -15,7 +16,7 @@ export async function Lestr<T>(...tasks: LestrInput<T>[] | LestrInput<T>[][]): P
       const output = (output: string) => { task.output = output }
       ctx[i] = await t.task({ title, output, task })
     }
-  })), { concurrent: true, exitOnError: false })).run()
+  })), { concurrent: true, exitOnError: false, renderer: process.stdout.isTTY === true ? undefined :  VerboseRenderer2 as any })).run()
 
   return tasks.map((_, i) => res[i])
 }
