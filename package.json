@@ -6,7 +6,7 @@
   "umd:main": "dist/reorgme.umd.js",
   "module": "dist/reorgme.mjs",
   "bin": {
-    "pizza": "dist/reorgme.js"
+    "reorgme": "dist/reorgme.js"
   },
   "files": [
     "dist",
