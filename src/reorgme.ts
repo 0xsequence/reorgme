@@ -426,7 +426,7 @@ export class Reorgme {
         output('Creating initialization database container')
         const initContainer = await this.docker.createContainer({
           Image: this.image,
-          name: name,
+          name: `${name}_tmp`,
           Cmd: [
             'init',
             '--datadir',
