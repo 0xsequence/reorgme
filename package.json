@@ -5,6 +5,9 @@
   "main": "dist/reorgme.js",
   "umd:main": "dist/reorgme.umd.js",
   "module": "dist/reorgme.mjs",
+  "bin": {
+    "pizza": "dist/reorgme.js"
+  },
   "files": [
     "dist",
     "readme.md"
@@ -47,7 +50,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Agustin Aguilar/reorgme"
+    "url": "git+https://github.com/0xsequence/reorgme"
   },
   "keywords": [],
   "jest": {
@@ -64,7 +67,7 @@
   "author": "Agustin Aguilar",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/Agustin Aguilar/reorgme/issues"
+    "url": "https://github.com/0xsequence/reorgme/issues"
   },
-  "homepage": "https://github.com/Agustin Aguilar/reorgme#readme"
+  "homepage": "https://github.com/0xsequence/reorgme#readme"
 }
