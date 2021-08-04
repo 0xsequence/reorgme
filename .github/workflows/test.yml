@@ -56,4 +56,4 @@ jobs:
             node_modules
             */*/node_modules
           key: ${{ runner.os }}-install-${{ hashFiles('**/package.json', '**/yarn.lock') }}
-      - run: ./node_modules/.bin/ts-node ./src/cmd.ts start
+      - run: yarn start start
