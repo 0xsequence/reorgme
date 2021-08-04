@@ -4,6 +4,8 @@
 
 Reorgme is a simple tool for creating private geth networks for reorg testing purposes, it uses Docker to generate a private network composed by 3 mining nodes using PoW. The tool allows for easily disconnecting a node from the other two, making it fork away from the chain, the node can be later reconnected to the other two nodes, this causes the node to experience a reorg.
 
+> Disclaimer: This is alpha software and currently a work in progress, expect bugs!
+
 ## Start a chain
 
 This command downloads the docker images for alpine and geth, then it proceeds to create 3 docker containers for the 3 nodes.
