@@ -4,7 +4,7 @@ import yargs from 'yargs/yargs'
 import { hideBin } from 'yargs/helpers'
 import { Reorgme, ReorgmeDefaults } from './reorgme'
 
-yargs(hideBin(process.argv))
+export const command = yargs(hideBin(process.argv))
   .options({
     id: { type: 'number', default: ReorgmeDefaults.id }
   })
