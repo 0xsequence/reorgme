@@ -28,3 +28,7 @@ yargs(hideBin(process.argv))
     await new Reorgme({ id: args.id }).logs()
   })
   .parse()
+
+export * from './reorgme'
+export * from './utils'
+export * from './easylistr'

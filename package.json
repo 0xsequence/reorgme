@@ -43,10 +43,12 @@
     "typescript": "^4.0.3"
   },
   "scripts": {
+
     "build": "microbundle -o dist/ --sourcemap false --compress false",
     "dev": "microbundle watch -o dist/ --sourcemap false --compress false",
     "test": "jest --coverage",
-    "lint": "eslint --ext .js,.jsx,.ts,.tsx ."
+    "lint": "eslint --ext .js,.jsx,.ts,.tsx .",
+    "start": "ts-node ./src/index.ts"
   },
   "repository": {
     "type": "git",
