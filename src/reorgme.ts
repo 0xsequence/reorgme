@@ -517,7 +517,7 @@ export class Reorgme {
         output('Copy DAG and init database')
         const copyContainer = await this.docker.createContainer({
           Image: 'alpine',
-          name: name,
+          name: `${name}_tmp`,
           Cmd: [
             'cp',
             '-a',
