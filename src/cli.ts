@@ -29,4 +29,11 @@ export const command = yargs(hideBin(process.argv))
   .command("logs", "show logs for all the nodes", () => {}, async (args) => {
     await new Reorgme({ id: args.id }).logs()
   })
+  .command("node", "node related commands", (yargs) => yargs
+    .options({
+      index: { type: 'number', require: true }
+    })
+    .command("ip", "retrieve the ip of a node", () => {}, async (args) => {
+      console.log(await new Reorgme({ id: args.id }).ipOf(args.index))
+    }))
   .parse()
