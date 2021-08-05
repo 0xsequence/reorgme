@@ -8,8 +8,32 @@ export const command = yargs(hideBin(process.argv))
   .options({
     id: { type: 'number', default: ReorgmeDefaults.id }
   })
-  .command("start", "creates and starts a new testnet blockchain", () => {}, async (args) => {
-    await new Reorgme({ id: args.id }).start()
+  .command("start", "creates and starts a new testnet blockchain", (yargs) => {
+    yargs.options({
+      detach: { type: 'boolean', default: true }
+    })
+  }, async (args) => {
+    const reorgme = new Reorgme({ id: args.id })
+
+    var canceled = false
+
+    process.on('SIGINT', async function() {
+      canceled = true
+      await reorgme.stop()
+      process.exit()
+    })
+
+    try {
+      await reorgme.start()
+
+      if (!args.detach) {
+        await reorgme.logs(1024)
+      }
+    } catch (e) {
+      if (!canceled) {
+        throw e
+      }
+    }
   })
   .command("stop", "stops and removes a testnet blockchain", () => {}, async (args) => {
     await new Reorgme({ id: args.id }).stop()

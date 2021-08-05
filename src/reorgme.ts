@@ -131,10 +131,10 @@ export class Reorgme {
     return `${NETWORK_PREFIX}_${this.id}_internal`
   }
 
-  public async logs() {
+  public async logs(tail = 10) {
     const containers = this.containerNames()
     const streams = await Promise.all(containers.map((c) => this.docker.getContainer(c).logs(
-      { stdout: true, stderr: true, tail: 10, follow: true }
+      { stdout: true, stderr: true, tail, follow: true }
     )))
 
     containers.forEach((c, i) => {
