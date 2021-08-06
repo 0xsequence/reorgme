@@ -24,7 +24,7 @@ export const command = yargs(hideBin(process.argv))
 
     const reorgme = new Reorgme({ id: args.id, allocations: allocations })
 
-    var canceled = false
+    let canceled = false
 
     process.on('SIGINT', async function() {
       canceled = true
