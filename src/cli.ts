@@ -10,10 +10,19 @@ export const command = yargs(hideBin(process.argv))
   })
   .command("start", "creates and starts a new testnet blockchain", (yargs) => {
     yargs.options({
-      detach: { type: 'boolean', default: true }
+      detach: { type: 'boolean', default: true },
+      allocation: { type: 'array', help: "balance allocation on genesis, e.g. 0xf41c74c9ae680c1aa78f42e5647a62f353b7bdde=1000000000000000000"}
     })
   }, async (args) => {
-    const reorgme = new Reorgme({ id: args.id })
+    const allocations = (args.allocation as string[]).map((s) => {
+      const parts = s.split("=")
+      if (parts.length !== 2) {
+        throw new Error(`invalid allocation ${s} - allocation format must follow <addr>=<balance>`)
+      }
+      return { addr: parts[0], balance: parts[1] }
+    }).reduce((p, v) => ({ ...p, [v.addr]: { balance: v.balance }}), {})
+
+    const reorgme = new Reorgme({ id: args.id, allocations: allocations })
 
     var canceled = false
 

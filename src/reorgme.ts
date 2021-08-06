@@ -15,7 +15,29 @@ const colors = [
   chalk.red
 ]
 
-export const SAMPLE_GENESIS = {
+export interface Genesis {
+  config: Config;
+  difficulty: string;
+  gasLimit: string;
+  alloc: Record<string, Allocation>
+}
+
+export interface Config {
+  chainId: number;
+  homesteadBlock: number;
+  eip150Block: number;
+  eip155Block: number;
+  eip158Block: number;
+  byzantiumBlock: number;
+  constantinopleBlock: number;
+  petersburgBlock: number;
+}
+export interface Allocation {
+  balance: string;
+}
+
+
+export const SAMPLE_GENESIS: Genesis = {
   "config": {
     "chainId": 9999,
     "homesteadBlock": 0,
@@ -24,8 +46,7 @@ export const SAMPLE_GENESIS = {
     "eip158Block": 0,
     "byzantiumBlock": 0,
     "constantinopleBlock": 0,
-    "petersburgBlock": 0,
-    "ethash": {}
+    "petersburgBlock": 0
   },
   "difficulty": "1",
   "gasLimit": "8000000",
@@ -43,10 +64,15 @@ export type NodeKeys = {
 export type ReorgmeOptions = {
   id?: number
   dockerOptions?: DockerOptions
+  allocations?: Record<string, { balance: ethers.BigNumberish }>
 }
 
 export const ReorgmeDefaults = {
   id: 0,
+  allocations: {
+    "7df9a875a174b3bc565e6424a0050ebc1b2d1d82": { balance: "1000000000000000000" },
+    "f41c74c9ae680c1aa78f42e5647a62f353b7bdde": { balance: "1000000000000000000" }
+  }
 }
 
 export class Reorgme {
@@ -54,6 +80,8 @@ export class Reorgme {
 
   public docker: Dockerode
   public image = "ethereum/client-go"
+
+  public genesis: Genesis
 
   public nodeKeys: NodeKeys[] = [{
     pk: "5a15d2e35fed8432f61d4e8b1a3cd0b4da90c614e58dac05530cbafb4f787058",
@@ -71,6 +99,15 @@ export class Reorgme {
 
     this.id = opts.id
     this.docker = new Dockerode(opts.dockerOptions)
+
+    // Generate genesis
+    this.genesis = { ...SAMPLE_GENESIS }
+
+    Object.keys(opts.allocations).forEach((k, i) => {
+      this.genesis.alloc[k.replace("0x", "")] = {
+        balance: ethers.BigNumber.from(Object.values(opts.allocations)[i].balance).toString()
+      }
+    })
   }
 
   public containerName(index: number) {
@@ -408,7 +445,7 @@ export class Reorgme {
       title: 'Writing genesis block',
       task: async({ title }) => {
         this.mustExistTmpFolder()
-        fs.writeFileSync(`${this.tmpFolder()}/genesis.json`, JSON.stringify(SAMPLE_GENESIS))
+        fs.writeFileSync(`${this.tmpFolder()}/genesis.json`, JSON.stringify(this.genesis))
         title('Written genesis block file')
       }
     })
