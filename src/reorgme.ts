@@ -183,7 +183,7 @@ export class Reorgme {
 
   public async ipOf(index: number) {
     const container = await waitFor(async () => { try { return await this.docker.getContainer(this.containerName(index)) } catch {} })
-    const netInfo = await waitFor(async () => (await container.inspect()).NetworkSettings.Networks[this.internalNetworkName()])
+    const netInfo = await waitFor(async () => (await container.inspect()).NetworkSettings.Networks[this.networkName()])
     return netInfo.IPAddress
   }
 
