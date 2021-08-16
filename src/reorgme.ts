@@ -181,19 +181,19 @@ export class Reorgme {
     })
   }
 
-  public async ipOf(index: number) {
+  public async ipOf(index: number, internal: boolean = false) {
     const container = await waitFor(async () => { try { return await this.docker.getContainer(this.containerName(index)) } catch {} })
-    const netInfo = await waitFor(async () => (await container.inspect()).NetworkSettings.Networks[this.networkName()])
+    const netInfo = await waitFor(async () => (await container.inspect()).NetworkSettings.Networks[internal ? this.internalNetworkName() : this.networkName()])
     return netInfo.IPAddress
   }
 
   public async enodeOf(index: number) {
-    return `enode://${this.nodeKeys[index].pub}@${await this.ipOf(index)}:30303`
+    return `enode://${this.nodeKeys[index].pub}@${await this.ipOf(index, true)}:30303`
   }
 
   public async rpcUrl(index: number) {
     const container = this.docker.getContainer(this.containerName(index))
-    return `http://${(await container.inspect()).NetworkSettings.Networks[this.networkName()].IPAddress}:8545/`
+    return `http://${await this.ipOf(index)}:8545/`
   }
 
   public async rpcProvider(index: number) {
