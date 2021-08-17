@@ -593,6 +593,7 @@ export class Reorgme {
           Image: this.image,
           name: name,
           Cmd: [
+            '--nodiscover',
             '--nocompaction',
             '--nousb',
             '--datadir',

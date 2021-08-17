@@ -11,7 +11,7 @@ export const command = yargs(hideBin(process.argv))
   .command("start", "creates and starts a new testnet blockchain", (yargs) => {
     yargs.options({
       detach: { type: 'boolean', default: true },
-      allocation: { type: 'array', help: "balance allocation on genesis, e.g. 0xf41c74c9ae680c1aa78f42e5647a62f353b7bdde=1000000000000000000"}
+      allocation: { type: 'array', help: "balance allocation on genesis, e.g. 0xf41c74c9ae680c1aa78f42e5647a62f353b7bdde=1000000000000000000", default: [] }
     })
   }, async (args) => {
     const allocations = (args.allocation as string[]).map((s) => {
