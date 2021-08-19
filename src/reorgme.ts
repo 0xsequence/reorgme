@@ -346,7 +346,7 @@ export class Reorgme {
         let lastBlock: ethers.providers.Block
         let lastAltBlock: ethers.providers.Block
 
-        for (var i = 0; i < 3; i++) {
+        for (let i = 0; i < 3; i++) {
           await waitCondition(async () => {
             const block = await provider.getBlock('latest')
             if (lastBlock && block.number === lastBlock?.number) return false
@@ -383,7 +383,7 @@ export class Reorgme {
         let lastBlock: ethers.providers.Block = await provider.getBlock('latest')
         let lastAltBlock: ethers.providers.Block
 
-        for (var i = 0; i < 3; i++) {
+        for (let i = 0; i < 3; i++) {
           await waitCondition(async () => {
             const block = await provider.getBlock('latest')
             if (block.number === lastBlock?.number) return false
