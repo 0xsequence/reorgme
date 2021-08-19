@@ -346,21 +346,23 @@ export class Reorgme {
         let lastBlock: ethers.providers.Block
         let lastAltBlock: ethers.providers.Block
 
-        await waitCondition(async () => {
-          const block = await provider.getBlock('latest')
-          if (lastBlock && block.number === lastBlock?.number) return false
-          lastBlock = block
+        for (var i = 0; i < 3; i++) {
+          await waitCondition(async () => {
+            const block = await provider.getBlock('latest')
+            if (lastBlock && block.number === lastBlock?.number) return false
+            lastBlock = block
 
-          output(`Found block ${block.number}:${block.hash.slice(0, 5)} on ${this.forkedContainer()}`)
-          lastAltBlock = await waitFor(async () => {
-            try {
-              const b = await altProvider.getBlock(block.number)
-              return b === null ? undefined : b
-            } catch {}
+            output(`Found block ${i} - ${block.number}:${block.hash.slice(0, 5)} on ${this.forkedContainer()}`)
+            lastAltBlock = await waitFor(async () => {
+              try {
+                const b = await altProvider.getBlock(block.number)
+                return b === null ? undefined : b
+              } catch {}
+            })
+            output(`Compare with other nodes ${i} - ${block.number}:${block.hash.slice(0, 5)} vs ${lastAltBlock.number}:${lastAltBlock.hash.slice(0, 5)}`)
+            return lastAltBlock.hash === block.hash
           })
-          output(`Compare with other nodes ${block.number}:${block.hash.slice(0, 5)} vs ${lastAltBlock.number}:${lastAltBlock.hash.slice(0, 5)}`)
-          return lastAltBlock.hash === block.hash
-        })
+        }
 
         title(`Joined ${this.forkedContainer()}`)
       }
@@ -378,23 +380,25 @@ export class Reorgme {
         const provider = await this.rpcProvider(0)
         const altProvider = await this.rpcProvider(1)
 
-        let lastBlock: ethers.providers.Block
+        let lastBlock: ethers.providers.Block = await provider.getBlock('latest')
         let lastAltBlock: ethers.providers.Block
 
-        await waitCondition(async () => {
-          const block = await provider.getBlock('latest')
-          if (lastBlock && block.number === lastBlock?.number) return false
-          lastBlock = block
+        for (var i = 0; i < 3; i++) {
+          await waitCondition(async () => {
+            const block = await provider.getBlock('latest')
+            if (block.number === lastBlock?.number) return false
+            lastBlock = block
 
-          output(`Found block ${block.number}:${block.hash.slice(0, 5)} on ${this.forkedContainer()}`)
-          lastAltBlock = await waitFor(async () => {
-            try {
-              return await altProvider.getBlock(block.number)
-            } catch {}
+            output(`Found block ${i} - ${block.number}:${block.hash.slice(0, 5)} on ${this.forkedContainer()}`)
+            lastAltBlock = await waitFor(async () => {
+              try {
+                return await altProvider.getBlock(block.number)
+              } catch {}
+            })
+            output(`Compare with other nodes ${i} - ${block.number}:${block.hash.slice(0, 5)} vs ${lastAltBlock.number}:${lastAltBlock.hash.slice(0, 5)}`)
+            return lastAltBlock.hash !== block.hash
           })
-          output(`Compare with other nodes ${block.number}:${block.hash.slice(0, 5)} vs ${lastAltBlock.number}:${lastAltBlock.hash.slice(0, 5)}`)
-          return lastAltBlock.hash !== block.hash
-        })
+        }
 
         title(`Forked ${this.forkedContainer()}`)
       }
