@@ -79,7 +79,7 @@ export class Reorgme {
   public id: number
 
   public docker: Dockerode
-  public image = "ethereum/client-go"
+  public image = "ethereum/client-go:v1.10.4"
 
   public genesis: Genesis
 
