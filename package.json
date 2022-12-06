@@ -1,12 +1,28 @@
 {
   "name": "reorgme",
   "version": "1.1.2",
-  "description": "",
+  "description": "Reorgme is a simple tool for creating private geth networks with reorgs",
+  "homepage": "https://github.com/0xsequence/reorgme#readme",
+  "author": "Agustin Aguilar",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/0xsequence/reorgme"
+  },
+  "keywords": [],
   "main": "dist/reorgme.js",
   "umd:main": "dist/reorgme.umd.js",
   "module": "dist/reorgme.mjs",
   "bin": {
     "reorgme": "dist/reorgme.js"
+  },
+  "scripts": {
+    "start": "ts-node ./src/index.ts",
+    "prepare": "yarn build",
+    "build": "microbundle -o dist/ --sourcemap false --compress false",
+    "dev": "microbundle watch -o dist/ --sourcemap false --compress false",
+    "test": "jest --coverage",
+    "lint": "eslint --ext .js,.jsx,.ts,.tsx ."
   },
   "files": [
     "dist",
@@ -43,19 +59,6 @@
     "ts-jest": "^26.3.0",
     "typescript": "^4.0.3"
   },
-  "scripts": {
-    "prepare": "yarn build",
-    "build": "microbundle -o dist/ --sourcemap false --compress false",
-    "dev": "microbundle watch -o dist/ --sourcemap false --compress false",
-    "test": "jest --coverage",
-    "lint": "eslint --ext .js,.jsx,.ts,.tsx .",
-    "start": "ts-node ./src/index.ts"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/0xsequence/reorgme"
-  },
-  "keywords": [],
   "jest": {
     "testEnvironment": "node",
     "testPathIgnorePatterns": [
@@ -67,10 +70,7 @@
       "^.+\\.ts?$": "ts-jest"
     }
   },
-  "author": "Agustin Aguilar",
-  "license": "MIT",
   "bugs": {
     "url": "https://github.com/0xsequence/reorgme/issues"
-  },
-  "homepage": "https://github.com/0xsequence/reorgme#readme"
+  }
 }
